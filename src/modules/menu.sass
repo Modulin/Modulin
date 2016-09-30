@@ -1,0 +1,83 @@
+@import 'mixins'
+
++customize(menu)
+  width: 400px
+  background: rgba(0,0,0,.15)
+  position: relative
+  margin: 10px
+  display: flex
+
+  +customizeState(hidden)
+    display: none
+
+  &:after
+    content: ""
+    display: block
+    clear: both
+
+  +customize(button)
+    float: left
+    width: 80px
+    height: 40px
+    text-align: center
+    line-height: 40px
+    font-size: 12px
+    flex-grow: 1
+
+    +customizeState(visible)
+      display: block
+
+    +customizeNested(link)
+      text-decoration: none
+
+    +customizeModule(linkButton)
+      text-decoration: underline
+
+      +customizeInstance(rotate)
+        +customizeNested(link, button)
+          display: block
+          animation: spinLeft 1.5s ease infinite
+
+    +customizeModule(backButton)
+      +customizeInstance(rotate)
+        +customizeNested(link, button)
+          color: red
+          display: block
+          animation: spinRight 3s ease infinite
+
+  +customizeInstance(wide)
+    width: 600px
+
+    +customize(button)
+      height: 60px
+      line-height: 60px
+
+      +customizeInstance(invisible)
+        opacity: 0
+
+      +customizeModule(backButton)
+        background: blue
+        color: white
+
+      +customizeModule(closeButton)
+        background: black
+        color: white
+
+      +customizeModule(linkButton)
+        text-decoration: none
+
+        +customizeInstance(rotate) // Enforce parent module exists
+          +customizeNested(link, button)
+            display: block
+            animation: spinRight 1.5s ease infinite
+
+  
+
+
+@keyframes spinRights
+  100%
+    transform: rotate(360deg)
+
+@keyframes spinLefts
+  100%
+    transform: rotate(-360deg)

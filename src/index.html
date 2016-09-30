@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="modulin.css">
+  <title>Modul.in</title>
+</head>
+<body>
+
+<div class="button" data-module=linkButton>
+  <a href="#" class="link link__button">
+    Click me
+  </a>
+</div>
+
+<div class="menu" data-module=menu>
+  <div class="button button__menu" data-module=linkButton data-instance=rotate>
+    <a href="#" class="link link__button">
+      Click me
+    </a>
+  </div>
+  <div class="button button__menu" data-module=closeButton data-instance=red>
+    X
+  </div>
+  <div class="button button__menu" data-module=backButton>
+    B
+  </div>
+  <div class="button button__menu" data-module=closeButton>
+    X
+  </div>
+</div>
+
+<div class="menu" data-module=menu data-instance=wide>
+  <div class="button button__menu" data-module=linkButton data-instance=rotate>
+    <a href="#" class="link link__button">
+      Click me
+    </a>
+  </div>
+  <div class="button button__menu" data-module=closeButton data-instance=invisible>
+    X
+  </div>
+  <div class="button button__menu" data-module=backButton>
+    B
+  </div>
+  <div class="button button__menu" data-module=closeButton>
+    X
+  </div>
+</div>
+
+<div class="menu" data-module=menu data-instance=wide>
+  <div class="button button__menu" data-module=linkButton data-instance=rotate>
+    <a href="#" class="link link__button">
+      Click me
+    </a>
+  </div>
+  <div class="button button__menu" data-module=backButton data-instance=rotate>
+    <a href="#" class="link link__button">
+      B
+    </a>
+  </div>
+  <div class="button button__menu" data-module=closeButton>
+    X
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,95 @@
+@function normalize($class) {
+  @return nth(nth($class, 1), 1);
+}
+
+@function rm-dot($class) {
+  @return str-replace($class, '.', '');
+}
+
+@function rm-attr($class) {
+  @return rm-tail($class, '[');
+}
+
+@function rm-parent($class) {
+  @return rm-tail($class, '__');
+}
+
+@function str-replace($classSelector, $search, $replace: '') {
+  $string: normalize($classSelector);
+  $index: str-index($string, $search);
+  @if $index {
+    @return str-slice($string, 1, $index - 1) + $replace + str-replace(str-slice($string, $index + str-length($search)), $search, $replace);
+  }
+  @return $string;
+}
+
+@function rm-tail($classSelector, $search) {
+  $string: nth(nth($classSelector, 1), 1);
+  $index: str-index($string, $search);
+  @if $index {
+    @return str-slice($string, 1, $index - 1);
+  }
+  @return $string;
+}
+
+
+
+
+
+@mixin customize($module) {
+
+  @if & {
+    $index: str-index(normalize(&), "[");
+
+    @if $index {
+      .#{$module}__#{rm-attr(#{rm-dot(&)})} {
+        @content
+      }
+    } @else {
+      @at-root .#{$module}__#{rm-dot(&)} {
+        @content
+      }
+    }
+  } @else {
+    .#{$module} {
+      @content
+    }
+  }
+}
+
+@mixin customizeNested($module, $parent:"") {
+  @if $parent == "" {
+    .#{$module}__#{rm-dot(#{rm-parent(#{rm-attr(&)})})} {
+      @content
+    }
+  } @else {
+    .#{$module}__#{$parent} {
+      @content
+    }
+  }
+}
+
+@mixin customizeState($state) {
+  &.#{rm-parent(rm-dot(&))}--#{$state} {
+    @content
+  }
+}
+
+@mixin customizeModule($module) {
+  &[data-module=#{$module}] {
+    @content
+  }
+}
+
+@mixin customizeInstance($alias) {
+  &[data-instance=#{$alias}] {
+    @content
+  }
+}
+
+// customize()
+// customizeState()
+
+// customizeModule()
+// customizeInstance()
+// customizeNested()
