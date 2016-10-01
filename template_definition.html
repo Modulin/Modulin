@@ -5,33 +5,34 @@
 <template id=Modulin>
 
   <template id=TaskManager>
-    <!--<TaskManager.List>-->
-      <!--<div class="test"></div>-->
-    <!--</TaskManager.List>-->
+    <TaskManager.List>
+      <div class="test"></div>
+    </TaskManager.List>
     <modulin.CloseButton data-test="abc" data-abc="test"></modulin.CloseButton>
-    <!--<TaskManager.Header></TaskManager.Header>-->
-    <!--<TaskManager.VisibilityFilter>-->
-      <!--<VisibilityFilter.Connector>-->
-        <!--<Connector.Connector2></Connector.Connector2>-->
-        <!--<VisibilityFilter.Connector2></VisibilityFilter.Connector2>-->
-      <!--</VisibilityFilter.Connector>-->
-    <!--</TaskManager.VisibilityFilter>-->
+    <TaskManager.Header></TaskManager.Header>
+    <TaskManager.VisibilityFilter>
+      <VisibilityFilter.Connector>
+        <Connector.Connector2></Connector.Connector2>
+        <VisibilityFilter.Connector2></VisibilityFilter.Connector2>
+      </VisibilityFilter.Connector>
+    </TaskManager.VisibilityFilter>
 
-    <!--<template id=Header>-->
-      <!--<div class="header"></div>-->
-    <!--</template>-->
+    <template id=Header>
+      <div class="header">A header</div>
+    </template>
 
-    <!--<template id=VisibilityFilter>-->
-      <!--<div class="all"></div>-->
-      <!--<VisibilityFilter.FilterButton data-filter=all></VisibilityFilter.FilterButton>-->
-      <!--<VisibilityFilter.FilterButton data-filter=open></VisibilityFilter.FilterButton>-->
-      <!--<VisibilityFilter.FilterButton data-filter=close></VisibilityFilter.FilterButton>-->
-    <!--</template>-->
+    <template id=VisibilityFilter>
+      <div class="all"></div>
+      <VisibilityFilter.FilterButton data-filter=all></VisibilityFilter.FilterButton>
+      <VisibilityFilter.FilterButton data-filter=open></VisibilityFilter.FilterButton>
+      <VisibilityFilter.FilterButton data-filter=close></VisibilityFilter.FilterButton>
+      <div data-content></div>
+    </template>
   </template>
 
-  <!--<template id=TaskManager.VisibilityFilter.FilterButton>-->
-    <!--<div class="action"></div>-->
-  <!--</template>-->
+  <template id=TaskManager.VisibilityFilter.FilterButton>
+    <div class="action"></div>
+  </template>
 
   <template id=TaskManager.List>
     <div class="a_list"></div>
@@ -73,10 +74,12 @@
 
 
   class Module {
-    constructor(element, context) {
+    inject(element, context) {
       this.context = context;
       this.element = element;
     }
+
+    mounted(){ }
   }
 
   class TemplateRegistry {
@@ -189,19 +192,76 @@
 </script>
 
 <script>
+  class ViewModel {
+    constructor(properties){
+      var get = this.get.bind(this);
+      var set = this.set.bind(this);
+      this.set = (property, value)=> set(properties, property, value);
+      this.get = (property)=> get(properties, property);
+      this.listeners = [];
+    }
+
+    set(properties, property, value){
+      properties[property] = value;
+
+      var diff = {};
+      diff[property] = value;
+      this.triggerChange(diff);
+    }
+
+    get(properties, property){
+      return properties[property];
+    }
+
+    onChange(callback){
+      this.listeners.push(callback);
+    }
+
+    triggerChange(diff){
+      this.listeners.forEach((listener)=>listener(diff));
+    }
+  }
+
   class TaskManager extends Module {
+    constructor(){
+      super();
+      this.taskView = new ViewModel({
+        name: 'A name'
+      });
+    }
   }
 
   class Header extends Module {
+
+    mounted(){
+      this.updateTitle(this.context.taskView.get('name'));
+
+      this.context.taskView.onChange((diff)=>{
+        var name = diff['name'];
+        if(name !== undefined){
+          this.updateTitle(name);
+        }
+      })
+    }
+
+    updateTitle(title){
+      this.element.querySelector('.header').innerHTML = title;
+    }
   }
 
   class VisibilityFilter extends Module {
+    mounted(){
+      setInterval(()=>{
+        this.context.taskView.set('name', Math.random());
+      }, 20);
+    }
   }
 
   class Connector extends Module {
   }
 
   class List extends Module {
+
   }
 
   class CloseButton extends Module {
@@ -257,7 +317,8 @@
     }
 
     if(ModuleConstructor){
-      module = new ModuleConstructor(root, parent);
+      module = new ModuleConstructor();
+      module.inject(root, parent);
     }
 
     children
@@ -289,6 +350,7 @@
         return root.appendChild(module.element);
       });
 
+    module && module.mounted();
     return module || {element:root};
   }
 
