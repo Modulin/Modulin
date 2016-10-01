@@ -1,4 +1,5 @@
 *.css
 *.css.map
-src/.sass-cache
+.sass-cache
+*/.sass-cache
 playground/
