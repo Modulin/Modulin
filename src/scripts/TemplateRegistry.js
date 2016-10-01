@@ -6,7 +6,6 @@ class TemplateRegistry {
 
   registerTemplate(id, namespace = []) {
     var node = document.getElementById(id);
-
     var templates = this.traverseTemplate(node, namespace);
     var resolvedTemplates = templates
       .map((template)=>this.resolveTemplate(template.value, template.key))
@@ -34,31 +33,35 @@ class TemplateRegistry {
       .map((child)=>expandedTemplate
         .removeChild(child));
 
-    return templates.concat({key:qualifierName, value:expandedTemplate});;
+    return templates
+      .concat({key:qualifierName, value:expandedTemplate});
   }
 
   resolveTemplate(template, templateQualifierName) {
     var children = template.children
-      .map((child)=>this.resolveFullQualifierName(templateQualifierName, child));
+      .map((child)=>this
+        .resolveFullQualifierName(templateQualifierName, child));
 
     return {qualifierName: templateQualifierName, node: template, children};
   }
 
   resolveFullQualifierName(templateQualifierName, node) {
-    var unNormalizedQualifierName = `.${templateQualifierName}.${node.nodeName}`
-      .toLowerCase();
-    var qualifierName = unNormalizedQualifierName
+    var qualifierName = `.${templateQualifierName}.${node.nodeName}`
+      .toLowerCase()
       .replace(/\.(.+)\..*\1/, (_, $1)=>`.${$1}`)
       .substr(1);
+
     var children = node.children
-      .map((child)=>this.resolveFullQualifierName(templateQualifierName, child));
+      .map((child)=>this
+        .resolveFullQualifierName(templateQualifierName, child));
+
     var attributes = node.attributes
-      .filter((attr)=>attr.name.indexOf('data-') === 0)
-      .map((attr)=>[attr.name.replace('data-',''), attr.value])
+      .filter((attr)=>attr.name
+        .indexOf('data-') === 0)
+      .map((attr)=>{return {key: attr.name.replace('data-',''), value: attr.value}})
       .reduce((obj, keyValue) => {
-        obj[keyValue[0]] = keyValue[1];
-        return obj;
-      }, {});
+        obj[keyValue.key] = keyValue.value;
+        return obj; }, {});
 
     return {qualifierName, node, children, attributes};
   }
@@ -73,6 +76,10 @@ class TemplateRegistry {
     return this
       .expandTemplate(template)
       .getElementsByTagName(tag);
+  }
+
+  find(qualifierName){
+    return this.registry[qualifierName];
   }
 }
 var templateRegistry = new TemplateRegistry();

@@ -1,8 +1,7 @@
 class Moduli {
 
   createModule(attachmentPoint, moduleClass) {
-    var qualifierName = moduleClass.__namespace.concat(moduleClass.name).join('.').toLowerCase();
-    var template = templateRegistry.registry[qualifierName];
+    var template = templateRegistry.find(moduleClass.getQualiferName());
     var module = this.constructModuleFromTemplate(template);
 
     attachmentPoint.appendChild(module.element);
