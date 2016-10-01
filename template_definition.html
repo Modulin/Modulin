@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+
+<modulin.TaskManager>
+    <modulin.CloseButton></modulin.CloseButton>
+    <TaskManager.Header></TaskManager.Header>
+    <TaskManager.VisibilityFilter>
+        <VisibilityFilter.Connector></VisibilityFilter.Connector>
+    </TaskManager.VisibilityFilter>
+    <TaskManager.List></TaskManager.List>
+</modulin.TaskManager>
+
+<template id=TaskManager.Header>
+    <div class="header"></div>
+</template>
+
+<template id=TaskManager.VisibilityFilter>
+    <div class="all"></div>
+    <FilterButton data-filter=all></FilterButton>
+    <FilterButton data-filter=open></FilterButton>
+    <FilterButton data-filter=close></FilterButton>
+</template>
+
+<template id=TaskManager.VisibilityFilter.FilterButton>
+    <div class="action"></div>
+</template>
+
+<template id=TaskManager.List>
+    <div class=""></div>
+</template>
+
+<script>
+    var arrayMethods = Object.getOwnPropertyNames(Array.prototype);
+
+    [NodeList, HTMLCollection].forEach(addArrayMethods);
+
+    function addArrayMethods(object) {
+        arrayMethods.forEach(attachArrayMethodsToNodeList.bind(object));
+
+    }
+
+    function attachArrayMethodsToNodeList(methodName) {
+        if (methodName !== "length" && !this.prototype[methodName]) {
+            Object.defineProperty(this.prototype, methodName, {
+                enumerable: false,
+                configurable: false,
+                writable: false,
+                value: Array.prototype[methodName]
+            });
+        }
+    }
+</script>
+
+<script>
+
+    class Module {
+        constructor(element, context) {
+            this.context = context;
+            this.element = element;
+        }
+    }
+
+    class TemplateRegistry {
+
+        constructor() {
+            this.registry = {};
+        }
+
+        getParent(namespace) {
+            return namespace.reduce((obj, part)=> {
+                return obj[part] || (obj[part] = {});
+            }, this.registry);
+        }
+
+        register(namespace, template) {
+            var name = namespace.pop();
+            var parent = this.getParent(namespace);
+
+            parent[name] = template;
+        }
+    }
+    TemplateRegistry = new TemplateRegistry();
+
+    class ModuleRegistry {
+
+        constructor() {
+            this.registry = {
+                modulin:{}
+            };
+        }
+
+        findByKey(key) {
+            return key.reduce((registry, key)=>registry[key], this.registry);
+        }
+
+        getModuleNamespace(module) {
+            return module.registryKey.reduce((registry, key)=>registry[key], this.registry);
+        }
+
+        addModuleToNamespace(namespace, registryKey, module) {
+            var key = module.name.toLowerCase();
+            var name = module.name;
+            namespace[key] = namespace[key] || {};
+            namespace[key].__module = module;
+
+            registryKey = registryKey.map((it)=>it);
+            registryKey.push(key);
+
+            module.registryKey = registryKey;
+        }
+
+        register(parentOrModule, module) {
+            var parent = null;
+            if (!module) {
+                module = parentOrModule;
+            } else {
+                parent = parentOrModule;
+            }
+
+            if (parent) {
+                var isDefined = this.getModuleNamespace(parent) !== null;
+                if (!isDefined) {
+                    throw "Parent not defined as Module";
+                }
+
+                var registryKey = parent.registryKey.map((it)=>it);
+
+                var namespace = this.getModuleNamespace(parent);
+
+                this.addModuleToNamespace(namespace, registryKey, module);
+            } else {
+                this.addModuleToNamespace(this.registry.modulin, ['modulin'], module);
+            }
+        }
+    }
+    ModuleRegistry = new ModuleRegistry();
+
+</script>
+
+<script>
+    class TaskManager extends Module {
+    }
+
+    class Header extends Module {
+    }
+
+    class VisibilityFilter extends Module {
+    }
+
+    class Connector extends Module {
+    }
+
+    class List extends Module {
+    }
+
+    class CloseButton extends Module {
+    }
+
+    ModuleRegistry.register(TaskManager);
+    ModuleRegistry.register(CloseButton);
+    ModuleRegistry.register(TaskManager, Header);
+    ModuleRegistry.register(TaskManager, List);
+    ModuleRegistry.register(TaskManager, VisibilityFilter);
+
+    ModuleRegistry.register(VisibilityFilter, Connector);
+</script>
+
+<script>
+    var domTemplates = document.querySelectorAll('template');
+    domTemplates.forEach((template) => {
+        var namespace = template.id.split('.');
+        TemplateRegistry.register(namespace, template);
+    });
+
+    var nodes = document
+            .getElementsByTagName('*')
+            .filter(filterNamespace('modulin'))
+            .reduce((list, node)=>findChildrenOfNamespace(null, list, node), [])
+            .map(getNamespacedParentNodes)
+            .reduce(resolveHierarchy, []);
+
+    var instances = [];
+    for(var i = 0; i < nodes.length; i++){
+        var node = nodes[i];
+        instantiate(node.node, node.children, node.namespace);
+    }
+    console.log(instances);
+
+    function findChildrenOfNamespace(parents, list, node){
+        var fullNamespace = node.nodeName.split('.');
+        var namespace = fullNamespace.pop();
+        var nodes = node.getElementsByTagName('*').filter(filterNamespace(namespace));
+
+        parents = parents || [fullNamespace.shift().toLowerCase()];
+        parents = parents.concat([namespace.toLowerCase()]);
+
+        var children = nodes.reduce((list, node)=>findChildrenOfNamespace(parents, list, node), []);
+        list.push({node, namespace:parents});
+        list = list.concat(children);
+        return list;
+    }
+
+    function filterNamespace(namespace){
+        namespace = namespace.toUpperCase();
+        return function filterNamespace(node){
+            return node.nodeName.indexOf(namespace) === 0;
+        }
+    }
+
+    function instantiate(node, children, namespace, parent = null){
+
+        var registryCell = ModuleRegistry.findByKey(namespace);
+        var Module = registryCell.__module;
+        var module = new Module(node, parent);
+        instances.push(module);
+
+        children.forEach((child)=>{
+            instantiate(child.node, child.children, child.namespace, module);
+        })
+    }
+
+    function resolveHierarchy(list, nodePath){
+        var nodeDescription = nodePath[nodePath.length - 1];
+        var namespace = nodeDescription.namespace;
+        var nodes = nodePath.map((node)=>node.node);
+        var node = nodeDescription.node;
+        var parent = list;
+        var path = nodePath;
+
+        outerLoop:
+        for(var i = 0; i < nodes.length; i++){
+            for(var j = 0; j < parent.length; j++){
+                var item  = parent[j];
+
+                if (nodes.indexOf(item.node) !== -1) {
+                    path = item.children;
+                    parent = path;
+                } else {
+                    break outerLoop;
+                }
+            }
+        }
+
+        var children = [];
+        parent.push({node, children, namespace});
+        return list;
+    }
+
+    function getNamespacedParentNodes(node){
+        var namespace = node.namespace;
+        var path = [];
+        node = node.node;
+
+        while (node.parentElement !== null) {
+            path.push({node, namespace});
+            node = node.parentElement;
+        }
+
+        return path.reverse();
+    }
+
+
+</script>
+
