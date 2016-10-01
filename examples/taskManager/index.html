@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Moduli - Task Manager</title>
+</head>
+<body>
+<div id=TaskManagerContainer></div>
+
+<script src="../../src/scripts/polyfills.js"></script>
+<script src="../../src/scripts/Module.js"></script>
+<script src="../../src/scripts/ModuleRegistry.js"></script>
+<script src="../../src/scripts/TemplateRegistry.js"></script>
+<script src="../../src/scripts/ViewModel.js"></script>
+<script src="../../src/scripts/Moduli.js"></script>
+
+<script src="Modules.js"></script>
+<script src="index.js"></script>
+
+<template id=Modulin>
+
+  <template id=TaskManager>
+    <TaskManager.List>
+      <div class="test"></div>
+    </TaskManager.List>
+    <modulin.CloseButton data-test="abc" data-abc="test"></modulin.CloseButton>
+    <TaskManager.Header></TaskManager.Header>
+    <TaskManager.VisibilityFilter>
+      <VisibilityFilter.Connector>
+        <Connector.Connector2></Connector.Connector2>
+        <VisibilityFilter.Connector2></VisibilityFilter.Connector2>
+      </VisibilityFilter.Connector>
+    </TaskManager.VisibilityFilter>
+
+    <template id=Header>
+      <div class="header">A header</div>
+    </template>
+
+    <template id=VisibilityFilter>
+      <div class="all"></div>
+      <VisibilityFilter.FilterButton data-filter=all></VisibilityFilter.FilterButton>
+      <VisibilityFilter.FilterButton data-filter=open></VisibilityFilter.FilterButton>
+      <VisibilityFilter.FilterButton data-filter=close></VisibilityFilter.FilterButton>
+      <div data-content></div>
+    </template>
+  </template>
+
+  <template id=TaskManager.VisibilityFilter.FilterButton>
+    <div class="action"></div>
+  </template>
+
+  <template id=TaskManager.List>
+    <div class="a_list"></div>
+    <div data-content></div>
+  </template>
+
+  <template id=CloseButton>
+    <div class="action"></div>
+    <Modulin.TaskManager.List>
+      <div>abc</div>
+    </Modulin.TaskManager.List>
+  </template>
+
+</template>
