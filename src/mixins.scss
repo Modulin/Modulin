@@ -2,18 +2,6 @@
   @return nth(nth($class, 1), 1);
 }
 
-@function rm-dot($class) {
-  @return str-replace($class, '.', '');
-}
-
-@function rm-attr($class) {
-  @return rm-tail($class, '[');
-}
-
-@function rm-parent($class) {
-  @return rm-tail($class, '__');
-}
-
 @function str-replace($classSelector, $search, $replace: '') {
   $string: normalize($classSelector);
   $index: str-index($string, $search);
@@ -32,9 +20,17 @@
   @return $string;
 }
 
+@function rm-dot($class) {
+  @return str-replace($class, '.', '');
+}
 
+@function rm-attr($class) {
+  @return rm-tail($class, '[');
+}
 
-
+@function rm-parent($class) {
+  @return rm-tail($class, '__');
+}
 
 @mixin customize($module) {
 
