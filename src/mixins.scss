@@ -72,8 +72,14 @@
 }
 
 @mixin customizeModule($module) {
+  @if & {
   &[data-module=#{$module}] {
     @content
+  }
+  } @else {
+    .#{$module}[data-module=#{$module}] {
+      @content
+    }
   }
 }
 
