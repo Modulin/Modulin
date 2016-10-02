@@ -12,12 +12,11 @@ class Module {
 
 Module.prototype.attachListOf = function(moduleClass, mountPoint, listenable){
   var cache = [];
-  var moduli = new Moduli();
   listenable((propertyList)=>{
     if(cache.length < propertyList.length){
       var viewModel = new ViewModel({});
       var context = {viewModel: viewModel};
-      var module = moduli.createModule(mountPoint, moduleClass, context);
+      var module = Moduli.createModule(mountPoint, moduleClass, context);
       cache.push(module); }
 
     else if(cache.length > propertyList.length){

@@ -40,7 +40,7 @@ class TemplateRegistry {
       into(this.registry));
   }
 
-  parseAttributes(attributes){
+  static parseAttributes(attributes){
     return attributes
       .filter(
         (attr) =>attr.name .indexOf('data-') === 0)
@@ -63,13 +63,12 @@ class TemplateRegistry {
 
   traverseTemplate(node, parentNamespace) {
     var name = node.id.split('.');
-    var childTemplates = this.findTagsInTemplate(node);
+    var childTemplates = TemplateRegistry.findTagsInTemplate(node);
     var namespace = parentNamespace.concat(name);
     var qualifierName = namespace.join('.').toLowerCase();
 
     var expandedTemplate = this
-      .removeTemplateTags(this
-        .expandTemplate(node));
+      .removeTemplateTags(TemplateRegistry.expandTemplate(node));
 
     var template = {
       key:qualifierName,
@@ -84,7 +83,7 @@ class TemplateRegistry {
 
   resolveTemplate(template, templateQualifierName) {
     var children = template.children
-      .map((child)=>this
+      .map((child)=>TemplateRegistry
         .resolveFullQualifierName(templateQualifierName, child));
 
     return {
@@ -92,18 +91,17 @@ class TemplateRegistry {
       node: template, children};
   }
 
-  resolveFullQualifierName(templateQualifierName, node) {
+  static resolveFullQualifierName(templateQualifierName, node) {
     var qualifierName = `.${templateQualifierName}.${node.nodeName}`
       .toLowerCase()
       .replace(/\.(.+)\..*\1/, (_, $1)=>`.${$1}`)
       .substr(1);
 
     var children = node.children
-      .map((child)=>this
+      .map((child)=>TemplateRegistry
         .resolveFullQualifierName(templateQualifierName, child));
 
-    var attributes = this
-      .parseAttributes(node.attributes);
+    var attributes = TemplateRegistry.parseAttributes(node.attributes);
 
     return {
       qualifierName,
@@ -112,15 +110,14 @@ class TemplateRegistry {
       attributes};
   }
 
-  expandTemplate(template) {
+  static expandTemplate(template) {
     var expandedTemplate = document.createElement('div');
     expandedTemplate.innerHTML = template.innerHTML;
     return expandedTemplate;
   }
 
-  findTagsInTemplate(template, tag = 'template') {
-    return this
-      .expandTemplate(template)
+  static findTagsInTemplate(template, tag = 'template') {
+    return TemplateRegistry.expandTemplate(template)
       .getElementsByTagName(tag);
   }
 

@@ -1,6 +1,6 @@
 class Moduli {
 
-  createModule(attachmentPoint, moduleClass, parent={}) {
+  static createModule(attachmentPoint, moduleClass, parent={}) {
     var template = templateRegistry
       .find(moduleClass
         .getQualiferName());
@@ -13,7 +13,7 @@ class Moduli {
 
     return module;}
 
-  generateClassListFrom(name){
+  static generateClassListFrom(name){
     return name
       .split('.')
       .reverse()
@@ -29,19 +29,19 @@ class Moduli {
         return acc }, [])
       .join(' '); }
 
-  copyTemplate(template){
+  static copyTemplate(template){
     return {
       qualifierName: template.qualifierName,
       attributes: template.attributes,
       node:template.node.cloneNode(true),
       children: template.children }; }
 
-  findContentNodeIn(root){
+  static findContentNodeIn(root){
     return root.children
       .filter((it)=>it.node
         .getAttribute('data-content') !== null)[0]; }
 
-  useNodeTemplateIfExists(child){
+  static useNodeTemplateIfExists(child){
     var template = templateRegistry.find(child.qualifierName);
 
     if(!template){
@@ -61,7 +61,7 @@ class Moduli {
 
     return template; }
 
-  createDomRootFromTemplate(template){
+  static createDomRootFromTemplate(template){
     var root = template.node;
     var registryTemplate = templateRegistry.find(template.qualifierName);
 
@@ -78,7 +78,7 @@ class Moduli {
 
     return root; }
 
-  createModuleBy(qualifierName){
+  static createModuleBy(qualifierName){
     var module = null;
     var ModuleConstructor = moduleRegistry.find(qualifierName);
     if (ModuleConstructor){
@@ -86,19 +86,19 @@ class Moduli {
 
     return module; }
 
-  createChildModules(module, children){
+  static createChildModules(module, children){
     return children
       .map((it)=>this.copyTemplate(it))
       .map((it)=>this.useNodeTemplateIfExists(it))
       .map((child)=>this.constructModuleFromTemplate(child, module)); }
 
-  attachChildModulesToRoot(root, childModules){
+  static attachChildModulesToRoot(root, childModules){
     if(root){
       childModules
         .filter((module)=>!!module.element)
         .forEach((module)=>root.appendChild(module.element)); } }
 
-  constructModuleFromTemplate(template, parent){
+  static constructModuleFromTemplate(template, parent){
     var root = this.createDomRootFromTemplate(template);
     var module = this.createModuleBy(template.qualifierName);
     var childModules = this.createChildModules(module, template.children);
