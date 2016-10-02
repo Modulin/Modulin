@@ -145,10 +145,20 @@ Suggested solution which might solve the problem:
     Modulin.register(AnExampleModule);
 `);
           var qualifierName = qualifierName1.split('.');
+
+          if(qualifierName.length <= 1){
+            qualifierName = qualifierName2.split('.')
+          }
+
           var name = qualifierName.pop();
           var parentName = qualifierName.pop();
           var namespace = qualifierName;
           var base = new Module();
+
+          if(!parentName){
+            console.log('A namespace is required to create a module');
+            return;
+          }
 
           // moduleClass = new Function( `return function ${name}(){}` )();
           moduleClass = new Function( `return function ${name} () {
