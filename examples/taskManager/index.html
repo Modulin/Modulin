@@ -4,22 +4,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Moduli - Task Manager</title>
+  <title>Modulin - Task Manager</title>
 </head>
 <body>
-<div id=TaskManagerContainer></div>
+<div id=TaskManagerContainer data-properties="instance: dark"></div>
 
 <script src="../../src/scripts/polyfills.js"></script>
 <script src="../../src/scripts/Module.js"></script>
 <script src="../../src/scripts/ModuleRegistry.js"></script>
 <script src="../../src/scripts/TemplateRegistry.js"></script>
+<script src="../../src/scripts/ModuleRenderer.js"></script>
 <script src="../../src/scripts/ViewModel.js"></script>
-<script src="../../src/scripts/Moduli.js"></script>
+<script src="../../src/scripts/Modulin.js"></script>
 
 <script src="Modules.js"></script>
 <script src="index.js"></script>
 
-<template id=Modulin>
+<template id=modulin>
 
   <template id=Text>
     <div class="text"></div>
@@ -27,13 +28,13 @@
 
   <template id=TaskManager>
     <TaskManager.List>
-      <div class="test"></div>
+      <div class="test2"></div>
     </TaskManager.List>
-    <modulin.CloseButton data-test="abc" data-abc="test"></modulin.CloseButton>
-    <TaskManager.Header data-prefix="jooo-"></TaskManager.Header>
+    <modulin.CloseButton test="abc" abc="test"></modulin.CloseButton>
+    <TaskManager.Header prefix="jooo-"></TaskManager.Header>
     <TaskManager.VisibilityFilter>
       <VisibilityFilter.Connector>
-        <Connector.Connector2></Connector.Connector2>
+        <VisibilityFilter.Connector2></VisibilityFilter.Connector2>
         <VisibilityFilter.Connector2></VisibilityFilter.Connector2>
       </VisibilityFilter.Connector>
     </TaskManager.VisibilityFilter>
@@ -44,10 +45,16 @@
 
     <template id=VisibilityFilter>
       <div class="all"></div>
-      <VisibilityFilter.FilterButton data-filter=all></VisibilityFilter.FilterButton>
-      <VisibilityFilter.FilterButton data-filter=open></VisibilityFilter.FilterButton>
-      <VisibilityFilter.FilterButton data-filter=close></VisibilityFilter.FilterButton>
-      <div data-content></div>
+      <VisibilityFilter.FilterButton filter=all></VisibilityFilter.FilterButton>
+      <VisibilityFilter.FilterButton filter=open></VisibilityFilter.FilterButton>
+      <VisibilityFilter.FilterButton filter=close></VisibilityFilter.FilterButton>
+      <div content></div>
+
+      <template id=Connector>
+        <div content></div>
+      </template>
+
+      <template id=Connector2></template>
     </template>
   </template>
 
@@ -57,8 +64,10 @@
 
   <template id=TaskManager.List>
     <div class="a_list"></div>
-    <div data-content></div>
+    <div content></div>
   </template>
+
+
 
   <template id=CloseButton>
     <div class="action">X</div>

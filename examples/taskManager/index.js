@@ -1,4 +1,4 @@
 window.addEventListener('load', ()=> {
-  templateRegistry.registerTemplate('Modulin');
-
-  Moduli.createModule(document.getElementById('TaskManagerContainer'), TaskManager); });
+  Modulin.registerTemplate('modulin');
+  Modulin.createModule(document.getElementById('TaskManagerContainer'), TaskManager);
+});

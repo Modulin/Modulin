@@ -2,34 +2,43 @@ class ModuleRegistry {
 
   constructor() {
     this.defaultNamespace = ['modulin'];
-    this.registry = {}; }
+    this.registry = {};
+  }
 
   register(parentOrModule, module) {
     var parent = null;
     var namespace = [];
 
     if (module) {
-      parent = parentOrModule; }
+      parent = parentOrModule;
+    }
     else {
-      module = parentOrModule; }
+      module = parentOrModule;
+    }
 
     if (parent) {
-      namespace = parent.__namespace.concat(parent.name); }
+      namespace = parent.__namespace.concat(parent.name);
+    }
     else {
-      namespace = this.defaultNamespace; }
+      namespace = this.defaultNamespace;
+    }
 
-    this.insert(namespace, module); }
+    this.insert(namespace, module);
+  }
 
-  insert(namespace, module){
+  insert(namespace, module) {
     var qualifierName = namespace
       .concat(module.name)
       .join('.')
       .toLowerCase();
 
     module.__namespace = namespace;
-    this.registry[qualifierName] = module; }
+    this.registry[qualifierName] = module;
+  }
 
-  find(qualifierName){
-    return this.registry[qualifierName]; } }
+  find(qualifierName) {
+    return this.registry[qualifierName];
+  }
+}
 
 var moduleRegistry = new ModuleRegistry();
