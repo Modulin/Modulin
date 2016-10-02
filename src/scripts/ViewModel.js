@@ -1,29 +1,40 @@
 class ViewModel {
   constructor(properties){
-    var get = this.get.bind(this);
-    var set = this.set.bind(this);
-    this.set = (property, value)=> set(properties, property, value);
-    this.get = (property)=> get(properties, property);
-    this.listeners = [];
-  }
+    this.__properties = properties;
+    this.__listeners = []; }
 
-  set(properties, property, value){
-    properties[property] = value;
+  set(property, value){
+    this.__properties[property] = value;
 
     var diff = {};
     diff[property] = value;
-    this.triggerChange(diff);
-  }
+    this.triggerChange(diff); }
 
-  get(properties, property){
-    return properties[property];
-  }
+  get(property){
+    return this.__properties[property]; }
 
-  onChange(callback){
-    this.listeners.push(callback);
-  }
+  getListenable(key){
+    return (callback)=>{
+      this.onChange(key, (properties)=>callback(properties[key])); } }
+
+  onChange(propertyOrCallback, callback){
+    var property = propertyOrCallback;
+    if(!callback){
+      property = null;
+      callback = propertyOrCallback;
+    }
+    if(property){
+      this.__listeners.push((diff)=>{
+        var value = diff[property];
+          if(value !== undefined){
+            callback(diff); }})}
+    else {
+      this.__listeners.push(callback); }
+
+    var properties = Object
+      .keys(this.__properties)
+      .reduce((obj, key)=>{obj[key] = this.__properties[key]; return obj;}, {});
+    callback(properties);}
 
   triggerChange(diff){
-    this.listeners.forEach((listener)=>listener(diff));
-  }
-}
+    this.__listeners.forEach((listener)=>listener(diff)); } }

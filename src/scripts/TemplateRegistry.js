@@ -1,3 +1,19 @@
+function toKeyValue(mapper){
+  return function(obj, item){
+    mapper(obj, item);
+    return obj; } }
+
+function groupBy(key){
+  return function(obj, item){
+    obj[item[key]] = item; } }
+
+function groupValueBy(key, valueKey){
+  return function(obj, item){
+    obj[item[key]] = item[valueKey]; } }
+
+function into(val){
+  return val; }
+
 class TemplateRegistry {
 
   constructor() {
@@ -5,36 +21,65 @@ class TemplateRegistry {
   }
 
   registerTemplate(id, namespace = []) {
-    var node = document.getElementById(id);
-    var templates = this.traverseTemplate(node, namespace);
-    var resolvedTemplates = templates
-      .map((template)=>this.resolveTemplate(template.value, template.key))
-      .reduce((obj, template)=>{
-        obj[template.qualifierName] = template;
-        return obj; }, {});
+    var node = document
+      .getElementById(id);
 
-    this.registry = resolvedTemplates;
+    var templates = this
+      .traverseTemplate(node, namespace);
+
+    var resolvedTemplates = templates
+      .map((template)=>this
+        .resolveTemplate(
+          template.value,
+          template.key));
+
+    resolvedTemplates
+      .reduce(
+        toKeyValue(
+          groupBy('qualifierName')),
+      into(this.registry));
+  }
+
+  parseAttributes(attributes){
+    return attributes
+      .filter(
+        (attr) =>attr.name .indexOf('data-') === 0)
+      .map((attr)=>{return {
+        key: attr.name.replace('data-',''),
+        value: attr.value}})
+      .reduce(
+        toKeyValue(
+          groupValueBy('key', 'value')), {});
+  }
+
+  removeTemplateTags(node){
+    node.children
+      .filter(
+        (child)=>child.nodeName === 'TEMPLATE')
+      .map((child)=>node
+        .removeChild(child));
+    return node;
   }
 
   traverseTemplate(node, parentNamespace) {
     var name = node.id.split('.');
-    var expandedTemplate = this.expandTemplate(node);
     var childTemplates = this.findTagsInTemplate(node);
     var namespace = parentNamespace.concat(name);
     var qualifierName = namespace.join('.').toLowerCase();
 
-    var templates = []
+    var expandedTemplate = this
+      .removeTemplateTags(this
+        .expandTemplate(node));
+
+    var template = {
+      key:qualifierName,
+      value:expandedTemplate};
+
+    return []
       .concat.apply([], childTemplates
-        .map((template)=>this
-          .traverseTemplate(template, namespace)));
-
-    expandedTemplate.children
-      .filter((child)=>child.nodeName === 'TEMPLATE')
-      .map((child)=>expandedTemplate
-        .removeChild(child));
-
-    return templates
-      .concat({key:qualifierName, value:expandedTemplate});
+        .map((itTemplate)=>this
+          .traverseTemplate(itTemplate, namespace)))
+      .concat(template);
   }
 
   resolveTemplate(template, templateQualifierName) {
@@ -42,7 +87,9 @@ class TemplateRegistry {
       .map((child)=>this
         .resolveFullQualifierName(templateQualifierName, child));
 
-    return {qualifierName: templateQualifierName, node: template, children};
+    return {
+      qualifierName: templateQualifierName,
+      node: template, children};
   }
 
   resolveFullQualifierName(templateQualifierName, node) {
@@ -55,15 +102,14 @@ class TemplateRegistry {
       .map((child)=>this
         .resolveFullQualifierName(templateQualifierName, child));
 
-    var attributes = node.attributes
-      .filter((attr)=>attr.name
-        .indexOf('data-') === 0)
-      .map((attr)=>{return {key: attr.name.replace('data-',''), value: attr.value}})
-      .reduce((obj, keyValue) => {
-        obj[keyValue.key] = keyValue.value;
-        return obj; }, {});
+    var attributes = this
+      .parseAttributes(node.attributes);
 
-    return {qualifierName, node, children, attributes};
+    return {
+      qualifierName,
+      node,
+      children,
+      attributes};
   }
 
   expandTemplate(template) {

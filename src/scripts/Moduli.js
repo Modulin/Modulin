@@ -1,73 +1,113 @@
 class Moduli {
 
-  createModule(attachmentPoint, moduleClass) {
-    var template = templateRegistry.find(moduleClass.getQualiferName());
-    var module = this.constructModuleFromTemplate(template);
+  createModule(attachmentPoint, moduleClass, parent={}) {
+    var template = templateRegistry
+      .find(moduleClass
+        .getQualiferName());
 
-    attachmentPoint.appendChild(module.element);
-  }
+    var module = this
+      .constructModuleFromTemplate(template, parent);
+
+    attachmentPoint
+      .appendChild(module.element);
+
+    return module;}
+
+  generateClassListFrom(name){
+    return name
+      .split('.')
+      .reverse()
+      .reduce((acc, _, index, children)=> {
+        var classes = [];
+
+        var list = [];
+        for (var i = 0; i <= index; i++) {
+          list.push(children[i]);
+          classes.push(list.map((j)=>j)); }
+
+        acc.push(list.join('__'));
+        return acc }, [])
+      .join(' '); }
+
+  copyTemplate(template){
+    return {
+      qualifierName: template.qualifierName,
+      attributes: template.attributes,
+      node:template.node.cloneNode(true),
+      children: template.children }; }
+
+  findContentNodeIn(root){
+    return root.children
+      .filter((it)=>it.node
+        .getAttribute('data-content') !== null)[0]; }
+
+  useNodeTemplateIfExists(child){
+    var template = templateRegistry.find(child.qualifierName);
+
+    if(!template){
+      return child; }
+
+    template = this.copyTemplate(template);
+    template.attributes = child.attributes;
+
+    if(child.children.length === 0){
+      return template; }
+
+    var contentAttachment = this.findContentNodeIn(template);
+    if (!contentAttachment) {
+      throw "No place to attach content"; }
+
+    contentAttachment.children = contentAttachment.children.concat(child.children);
+
+    return template; }
+
+  createDomRootFromTemplate(template){
+    var root = template.node;
+    var registryTemplate = templateRegistry.find(template.qualifierName);
+
+    if (registryTemplate) {
+      root = document.createElement('div');
+      root.classList = this
+        .generateClassListFrom(
+          template.qualifierName); }
+
+    if (template.node.nodeName.indexOf('.') !== -1
+      && !registryTemplate) {
+      console.error(`No template found for ${template.qualifierName}. [Removing from DOM]`);
+      root = null; }
+
+    return root; }
+
+  createModuleBy(qualifierName){
+    var module = null;
+    var ModuleConstructor = moduleRegistry.find(qualifierName);
+    if (ModuleConstructor){
+      module = new ModuleConstructor(); }
+
+    return module; }
+
+  createChildModules(module, children){
+    return children
+      .map((it)=>this.copyTemplate(it))
+      .map((it)=>this.useNodeTemplateIfExists(it))
+      .map((child)=>this.constructModuleFromTemplate(child, module)); }
+
+  attachChildModulesToRoot(root, childModules){
+    if(root){
+      childModules
+        .filter((module)=>!!module.element)
+        .forEach((module)=>root.appendChild(module.element)); } }
 
   constructModuleFromTemplate(template, parent){
-    var children = template.children;
-    var root = template.node;
-    var ModuleConstructor =  moduleRegistry.registry[template.qualifierName];
-    var module = null;
+    var root = this.createDomRootFromTemplate(template);
+    var module = this.createModuleBy(template.qualifierName);
+    var childModules = this.createChildModules(module, template.children);
 
-    if(templateRegistry.registry[template.qualifierName]) {
-      root = document.createElement('div');
-      root.classList = template.qualifierName
-        .split('.')
-        .reverse()
-        .reduce((acc, _, index, children)=> {
-          var classes = [];
+    if(module){
+      module.inject(root, parent);}
 
-          var list = [];
-          for (var i = 0; i <= index; i++) {
-            list.push(children[i]);
-            classes.push(list.map((j)=>j));
-          }
+    this.attachChildModulesToRoot(root, childModules);
+    if(module){
+      module.mounted();}
 
-          acc.push(list.join('__'));
-          return acc
-        }, [])
-        .join(' ');
-    }
-
-    if(ModuleConstructor){
-      module = new ModuleConstructor();
-      module.inject(root, parent);
-    }
-
-    children
-      .map((child)=>{return {qualifierName: child.qualifierName, attributes: child.attributes, node:child.node.cloneNode(true), children: child.children};})
-      .map((child)=>{
-        var template = templateRegistry.registry[child.qualifierName];
-        var passedOnNode = child;
-
-        if(template) {
-          template =  {qualifierName: template.qualifierName, attributes: child.attributes, node:template.node.cloneNode(true), children: template.children}
-          if (child.children.length > 0) {
-            var contentAttachment = template.children.filter((it)=>it.node.getAttribute('data-content') !== null)[0];
-
-            if (!contentAttachment) {
-              throw "No place to attach content";
-            }
-
-            contentAttachment.children = contentAttachment.children.concat(child.children);
-
-            passedOnNode = template;
-          } else {
-            passedOnNode = template;
-          }
-        }
-
-        return passedOnNode; })
-      .map((child)=>this.constructModuleFromTemplate(child, module))
-      .map((module)=>{
-        return root.appendChild(module.element);
-      });
-
-    module && module.mounted();
-    return module || {element:root};
-  }
-}
+    return module || {element:root}; } }

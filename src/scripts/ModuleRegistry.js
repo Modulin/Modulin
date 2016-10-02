@@ -2,8 +2,7 @@ class ModuleRegistry {
 
   constructor() {
     this.defaultNamespace = ['modulin'];
-    this.registry = {};
-  }
+    this.registry = {}; }
 
   register(parentOrModule, module) {
     var parent = null;
@@ -19,8 +18,7 @@ class ModuleRegistry {
     else {
       namespace = this.defaultNamespace; }
 
-    this.insert(namespace, module);
-  }
+    this.insert(namespace, module); }
 
   insert(namespace, module){
     var qualifierName = namespace
@@ -29,11 +27,9 @@ class ModuleRegistry {
       .toLowerCase();
 
     module.__namespace = namespace;
-    this.registry[qualifierName] = module;
-  }
+    this.registry[qualifierName] = module; }
 
   find(qualifierName){
-    return this.registry[qualifierName];
-  }
-}
+    return this.registry[qualifierName]; } }
+
 var moduleRegistry = new ModuleRegistry();
