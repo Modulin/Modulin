@@ -130,26 +130,16 @@ Suggested solution which might solve the problem:
           moduleClass = moduleRegistry.find(qualifierName2);
         }
         if(!moduleClass){
-          console.log(`No module found:
-
-The tested qualifier names are:
-  ${qualifierName1}
-  ${qualifierName2}
-  
-The following action will be applied to resolve the issue: 
-  A dummy module will be created for the template 
-  
-Suggested solution which might solve the problem:
-  Create a new module:
-    class AnExampleModule extends Module {}
-    Modulin.register(AnExampleModule);
-`);
           var qualifierName = qualifierName1.split('.');
+          if(!templateRegistry.find(qualifierName1)){
 
-          if(qualifierName.length <= 1){
-            qualifierName = qualifierName2.split('.')
+            qualifierName = qualifierName2.split('.');
+            if(!templateRegistry.find(qualifierName2)){
+              debugger;
+            }
           }
 
+          var fullNamespace = qualifierName.join('.');
           var name = qualifierName.pop();
           var parentName = qualifierName.pop();
           var namespace = qualifierName;
@@ -159,14 +149,20 @@ Suggested solution which might solve the problem:
             console.log('A namespace is required to create a module');
             return;
           }
+          moduleClass = Module.createSubClass(name);
 
-          // moduleClass = new Function( `return function ${name}(){}` )();
-          moduleClass = new Function( `return function ${name} () {
-            this.inject = function ${base.inject.toString()}
-            this.mounted = function ${base.mounted.toString()}
-            }` )();
-          moduleClass.getQualiferName = Module.getQualiferName;
           Modulin.register({__namespace: namespace, name:parentName}, moduleClass);
+
+          console.log(`No module found:
+
+The tested qualifier names are:
+  ${qualifierName1}
+  ${qualifierName2}
+  
+The following action will be applied to resolve the issue: 
+  A dummy module will be created for the template:
+   ${fullNamespace}
+`);
         }
         Modulin.createModule(element, moduleClass);
       });

@@ -1,5 +1,5 @@
 class Module {
-  inject(element, context, properties) {
+  mount(element, context, properties) {
     this.context = context;
     this.element = element;
     this.properties = properties;
@@ -9,10 +9,31 @@ class Module {
     return this.__namespace.concat(this.name).join('.').toLowerCase();
   }
 
-  unmounted() {}
+  unMount(){
+    this.element.parentElement.removeChild(this.element);
+    this.context = null;
+    this.element = null;
+    this.unmounted();
+  }
+
+  unmounted() { }
 
   mounted() { }
 }
+
+Module.createSubClass = function createDummy(name){
+  var base = new Module();
+  var subClass = new Function(
+    `return function ${name} () {
+      this.mount = function ${base.mount.toString()}
+      this.unmount = function ${base.unmounted.toString()}
+      this.mounted = function ${base.mounted.toString()}
+      this.unmounted = function ${base.mounted.toString()}
+    }` )();
+  subClass.getQualiferName = Module.getQualiferName;
+
+  return subClass;
+};
 
 Module.prototype.attachListOf = function (moduleClass, mountPoint, listenable) {
   var cache = [];
@@ -26,15 +47,7 @@ Module.prototype.attachListOf = function (moduleClass, mountPoint, listenable) {
 
     else if (cache.length > propertyList.length) {
       var removeItems = cache.splice(propertyList.length);
-      removeItems.forEach((item)=> {
-        var el = item.element;
-
-        item.unmounted();
-        item.context = null;
-        item.element = null;
-
-        el.parentElement.removeChild(el);
-      });
+      removeItems.forEach((item)=> { item.unMount(); });
     }
 
     cache.forEach((module, index)=> {

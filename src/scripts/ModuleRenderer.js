@@ -141,7 +141,7 @@ Suggested solution which might solve the problem:
     var childModules = createChildModules(module, template.children, template, options);
 
     if (module) {
-      module.inject(root, parent, template.attributes);
+      module.mount(root, parent, template.attributes);
     }
 
     attachChildModulesToRoot(root, childModules);
@@ -153,6 +153,7 @@ Suggested solution which might solve the problem:
   }
 
   function createChildModules(module, children, parentDebugContext, options) {
+
     return children
       .map((it)=>copyTemplate(it))
       .map((it)=>useNodeTemplateIfExists(it, parentDebugContext))
