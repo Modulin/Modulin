@@ -7,7 +7,7 @@
   <title>Modulin - Task Manager</title>
 </head>
 <body>
-<div id=TaskManagerContainer data-properties="instance: dark"></div>
+<div data-module=modulin2.Text data-properties="instance: dark"></div>
 
 <script src="../../src/scripts/polyfills.js"></script>
 <script src="../../src/scripts/Module.js"></script>
@@ -18,7 +18,12 @@
 <script src="../../src/scripts/Modulin.js"></script>
 
 <script src="Modules.js"></script>
-<script src="index.js"></script>
+
+<template id=modulin2>
+  <template id=Text>
+    <div class="text2">test2</div>
+  </template>
+</template>
 
 <template id=modulin>
 

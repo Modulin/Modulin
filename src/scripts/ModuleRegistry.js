@@ -1,7 +1,7 @@
 class ModuleRegistry {
 
   constructor() {
-    this.defaultNamespace = ['modulin'];
+    this.defaultNamespace = [];
     this.registry = {};
   }
 
