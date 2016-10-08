@@ -62,6 +62,10 @@
         .addEventListener('keypress', (e)=> {
           if(e.keyCode === 13) {
             var value = this.inputElement.value;
+
+            if(value.length === 0)
+              return;
+
             this.inputElement.value = '';
 
             var items = this.context.viewModel.get('items');

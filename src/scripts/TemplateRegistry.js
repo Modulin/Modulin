@@ -43,6 +43,10 @@
       this.attributes = parameters.attributes;
     }
 
+    getTemplate(){
+      return templateRegistry.find(this.qualifierName);
+    }
+
     copy() {
       return new NonTemplateNode({
         qualifierName: this.qualifierName,
@@ -116,6 +120,10 @@
 
       this.isNamespace = parameters.isNamespace;
       this.alias = parameters.alias;
+    }
+
+    getAliasTemplate(){
+      return this.alias && templateRegistry.find(this.alias);
     }
 
     copy() {

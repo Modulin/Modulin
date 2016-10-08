@@ -1,129 +1,163 @@
 (function (exports) {
 
-  function findContentNodeInTemplate(template) {
-    return template.children
-      .filter((it)=>it.node
-        .getAttribute('content') !== null)[0];
+  const Resolvers = {
+    alias: function aliasResolver(node, template) {
+      var aliasedTemplate = template.getAliasTemplate();
+
+      if (aliasedTemplate) {
+        aliasedTemplate = aliasedTemplate.copy();
+        aliasedTemplate.qualifierName = template.qualifierName;
+        template = aliasedTemplate;
+      } else {
+        template = template.copy();
+      }
+
+      return template;
+    },
+    attribute: function attributeResolver(node, template) {
+      template.attributes = node.attributes;
+      return template;
+    },
+    contentAttachment: function contentAttachmentResolver(node, template) {
+      if (node.children.length === 0) {
+        return template;
+      }
+
+      var contentAttachment = findContentNodeInTemplate(template);
+      if (!contentAttachment) {
+        MissingElementContentMountPoint(template, node);
+        return template;
+      }
+
+      contentAttachment.children = contentAttachment.children.concat(node.children);
+      return template;
+
+      function findContentNodeInTemplate(template) {
+        return template.children
+          .filter((it)=>it.node
+            .getAttribute('content') !== null)[0];
+      }
+    }
+  };
+
+
+  class Attribute {
+    constructor(key, value) {
+      this.key = key;
+      this.value = value;
+    }
+
+    writeTo(node){
+      node.setAttribute(this.key, this.value)
+    }
   }
 
-  function useNodeTemplateIfExists(child, parentDebugContext) {
-    var template = templateRegistry.find(child.qualifierName);
+  class ClassAttribute {
+    constructor(template, options){
+      var separator = options.moduleClassSeparator;
+      var expandedQualfierName = template.qualifierName.split('.');
 
-    if (!template) {
-      return child;
+      if (options.excludeNamespace) {
+        expandedQualfierName.shift();
+      }
+
+      this.value = expandedQualfierName
+        .reverse()
+        .reduce((acc, _, index, children)=> {
+          var classes = [];
+
+          var list = [];
+          for (var i = 0; i <= index; i++) {
+            list.push(children[i]);
+            classes.push(list.map((j)=>j));
+          }
+
+          acc.push(list.join(separator));
+          return acc
+        }, []);
     }
 
-    var alias = template.alias;
-    if (alias) {
-      var aliasedTemplate = templateRegistry.find(alias);
-      aliasedTemplate = aliasedTemplate.copy();
-      aliasedTemplate.qualifierName = template.qualifierName;
-      template = aliasedTemplate;
-    } else {
-      template = template.copy();
+    writeTo(node){
+      node.classList = this.value.join(' ');
     }
-
-    template.attributes = child.attributes;
-
-    if (child.children.length === 0) {
-      return template;
-    }
-
-    var contentAttachment = findContentNodeInTemplate(template);
-    if (!contentAttachment) {
-      MissingElementContentMountPoint(template, child, parentDebugContext);
-      return template;
-    }
-
-    contentAttachment.children = contentAttachment.children.concat(child.children);
-    return template;
   }
 
-  function createDomRootFromTemplate(template, options) {
-    var root = template.node;
-    var registryTemplate = templateRegistry.find(template.qualifierName);
 
-    if (registryTemplate) {
-      root = document.createElement('div');
-      root.classList = generateClassListFromTemplate(template, options);
+  class ModuleConstructor {
+    constructor(options, template, parentModule) {
+      this.options = options;
 
-      if (template.attributes.instance) {
-        root.setAttribute('data-instance', template.attributes.instance);
+      this.template = template;
+      this.parent = parentModule;
+    }
+
+    mountModule(module, node, children){
+      var properties = this.template.attributes;
+      var parent = this.parent;
+
+      if (node) {
+        children.filter((module)=>!!module.element).forEach((module)=>node.appendChild(module.element));
+      }
+
+      if (module) {
+        module.mount(node, parent, properties);
+        module.mounted();
+      }
+
+      return module || {element: node};
+    }
+
+    constructChildren(node, module) {
+      var template = node.getTemplate();
+
+      if (template) {
+        template = Resolvers.alias(node, template);
+        template = Resolvers.attribute(node, template);
+        template = Resolvers.contentAttachment(node, template);
+      } else {
+        template = node.copy();
+      }
+
+      return new ModuleConstructor(this.options, template, module).constructAndMount();
+    }
+
+    constructRootNode() {
+      var node = this.template.node;
+      var registryTemplate = templateRegistry.find(this.template.qualifierName);
+
+      if (registryTemplate) {
+
+        var attributeList = [];
+        attributeList.push(new ClassAttribute(this.template, this.options));
+        if (this.template.attributes.instance) {
+          attributeList.push(new Attribute('instance', this.template.attributes.instance));
+        }
+
+        node = document.createElement('div');
+        attributeList.forEach((attr) =>attr.writeTo(node));
+      }
+
+      if (this.template.node.nodeName.indexOf('.') !== -1 && !registryTemplate) {
+        NoTemplateFound(this.template);
+      }
+
+      return node;
+    }
+
+    constructoModule() {
+      var qualifierName = this.template.qualifierName;
+      var Module = moduleRegistry.find(qualifierName);
+      if (Module) {
+        return new Module();
       }
     }
 
-    if (template.node.nodeName.indexOf('.') !== -1 && !registryTemplate) {
-      NoTemplateFound(template);
-      root = null;
-    }
+    constructAndMount() {
+      var module = this.constructoModule();
+      var node = this.constructRootNode();
+      var childModules = this.template.children.map((child)=>this.constructChildren(child, module));
 
-    return root;
-  }
-
-  function generateClassListFromTemplate(template, options) {
-    var expandedQualfierName = template.qualifierName.split('.');
-
-    if (options.excludeNamespace) {
-      expandedQualfierName.shift();
-    }
-
-    return expandedQualfierName
-      .reverse()
-      .reduce((acc, _, index, children)=> {
-        var classes = [];
-
-        var list = [];
-        for (var i = 0; i <= index; i++) {
-          list.push(children[i]);
-          classes.push(list.map((j)=>j));
-        }
-
-        acc.push(list.join(options.moduleClassSeparator));
-        return acc
-      }, [])
-      .join(' ');
-  }
-
-  function createModuleBy(qualifierName) {
-    var module = null;
-    var ModuleConstructor = moduleRegistry.find(qualifierName);
-    if (ModuleConstructor) {
-      module = new ModuleConstructor();
-    }
-
-    return module;
-  }
-
-  function constructModuleFromTemplate(template, parent, options) {
-    var root = createDomRootFromTemplate(template, options);
-    var module = createModuleBy(template.qualifierName);
-    var childModules = createChildModules(module, template.children, template, options);
-
-    if (module) {
-      module.mount(root, parent, template.attributes);
-    }
-
-    attachChildModulesToRoot(root, childModules);
-    if (module) {
-      module.mounted();
-    }
-
-    return module || {element: root};
-  }
-
-  function createChildModules(module, children, parentDebugContext, options) {
-
-    return children
-      .map((child)=>child.copy())
-      .map((child)=>useNodeTemplateIfExists(child, parentDebugContext))
-      .map((child)=>constructModuleFromTemplate(child, module, options));
-  }
-
-  function attachChildModulesToRoot(root, childModules) {
-    if (root) {
-      childModules
-        .filter((module)=>!!module.element)
-        .forEach((module)=>root.appendChild(module.element));
+      return this.mountModule(module, node, childModules);
     }
   }
 
@@ -137,15 +171,14 @@
     }
 
     constructFromTemplate(template, parent) {
-      var options = this.options;
-      return constructModuleFromTemplate(template, parent, options);
+      return new ModuleConstructor(this.options, template, parent).constructAndMount();
     }
   }
 
   exports.ModuleRenderer = ModuleRenderer;
   exports.moduleRenderer = new ModuleRenderer();
 
-  function NoTemplateFound(template){
+  function NoTemplateFound(template) {
     console.error(`No template found
 
 The module which is used improperly has qualifier name:
