@@ -1,102 +1,162 @@
 (function (exports) {
-  function toKeyValue(mapper) {
-    return function (obj, item) {
-      mapper(obj, item);
-      return obj;
+
+  class TemplateParser {
+    constructor(templateElement, parentNamespace) {
+      this.templateElement = templateElement;
+      this.namespace = parentNamespace.concat(this.getId());
+      this.node = this.getExpandedTemplate(['id', 'alias']);
+      this.childNodes = this.getChildTemplateParsers();
+      this.templateNode = TemplateNode.fromNode(this.node, this.namespace, this.templateElement.getAttribute('alias'));
+    }
+
+    getChildTemplateParsers() {
+      return this.node.getElementsByTagName('template').map((child)=>new TemplateParser(child, this.namespace));
+    }
+
+    getId() {
+      return this.templateElement.id.split('.');
+    }
+
+    getTemplateNodes() {
+      return [].concat.apply(this.templateNode, this.childNodes.map((node)=>node.getTemplateNodes()));
+    }
+
+    getExpandedTemplate(excludedAttributes) {
+      var expandedTemplate = document.createElement('div');
+      expandedTemplate.innerHTML = this.templateElement.innerHTML;
+
+      this.templateElement.attributes
+        .filter((attr)=>excludedAttributes.indexOf(attr.name) === -1)
+        .forEach((attr)=>
+          expandedTemplate.setAttribute(attr.name, attr.value));
+
+      return expandedTemplate;
     }
   }
 
-  function groupValueBy(key, valueKey) {
-    return function (obj, item) {
-      obj[item[key]] = item[valueKey];
+  class NonTemplateNode {
+    constructor(parameters) {
+      this.qualifierName = parameters.qualifierName;
+      this.node = parameters.node;
+      this.children = parameters.children;
+
+      this.attributes = parameters.attributes;
+    }
+
+    copy() {
+      return new NonTemplateNode({
+        qualifierName: this.qualifierName,
+        node: this.node.cloneNode(true),
+        children: this.children,
+
+        attributes: this.attributes
+      });
     }
   }
-
-  function into(val) {
-    return val;
-  }
-
-  function parseAttributes(attributes) {
-    return attributes
-      .map((attr)=> {
-        return {
-          key: attr.name.replace('data-', ''),
-          value: attr.value
-        }
-      })
-      .reduce(
-        toKeyValue(
-          groupValueBy('key', 'value')), {});
-  }
-
-  function removeTemplateTags(node) {
-    node.children
-      .filter(
-        (child)=>child.nodeName === 'TEMPLATE')
-      .map((child)=>node
-        .removeChild(child));
-    return node;
-  }
-
-  function expandTemplate(template) {
-    var expandedTemplate = document.createElement('div');
-    expandedTemplate.innerHTML = template.innerHTML;
-    return expandedTemplate;
-  }
-
-  function findTagsInTemplate(template, tag = 'template') {
-    return expandTemplate(template)
-      .getElementsByTagName(tag);
-  }
-
-  function resolveFullQualifierName(templateQualifierName, node) {
-    var qualifierName = `.${templateQualifierName}.${node.nodeName}`
-      .toLowerCase()
-      .replace(/\.(.+)\..*\1/, (_, $1)=>`.${$1}`)
-      .substr(1);
-
-    var children = node.children
-      .map((child)=>resolveFullQualifierName(templateQualifierName, child));
-
+  NonTemplateNode.fromNode = function fromNode(node, namespace) {
+    var qualifierName = parseQualifierName(node.nodeName, namespace);
     var attributes = parseAttributes(node.attributes);
+    var children = node.children.map((child)=>NonTemplateNode.fromNode(child, namespace));
 
-    return {
-      qualifierName,
-      node,
-      children,
-      attributes
-    };
+    return new NonTemplateNode({qualifierName, node, attributes, children});
+
+    function parseQualifierName(name, namespace) {
+      return []
+        .concat([''], namespace, name)
+        .join('.')
+        .replace(/\.(.+)\..*\1/i, (_, $1)=>`.${$1}`)
+        .substr(1)
+        .toLowerCase();
+    }
+
+    function parseAttributes(attributeList) {
+      return attributeList
+        .map((attr)=> {
+          return {
+            key: attr.name.replace('data-', ''),
+            value: attr.value
+          }
+        })
+        .reduce(
+          groupByField('key',
+            mapKey('value')),
+          into({}));
+
+      function mapKey(key) {
+        return function (obj) {
+          return obj[key];
+        }
+      }
+
+      function groupByField(key, valueMapper) {
+        valueMapper = valueMapper || transparentMapper;
+        return group;
+
+        function group(obj, item) {
+          obj[item[key]] = valueMapper(item);
+          return obj;
+        }
+
+        function transparentMapper(value) {
+          return value;
+        }
+      }
+
+      function into(val) {
+        return val;
+      }
+    }
+  };
+
+  class TemplateNode {
+    constructor(parameters) {
+      this.qualifierName = parameters.qualifierName;
+      this.node = parameters.node;
+      this.children = parameters.children;
+
+      this.isNamespace = parameters.isNamespace;
+      this.alias = parameters.alias;
+    }
+
+    copy() {
+      return new TemplateNode({
+        qualifierName: this.qualifierName,
+        node: this.node.cloneNode(true),
+        children: this.children,
+
+        isNamespace: this.isNamespace,
+        alias: this.alias,
+      });
+    }
+
   }
+  TemplateNode.fromNode = function fromNode(node, namespace, alias) {
+    var qualifierName = parseQualifierName(namespace);
+    var isNamespace = getIsNamespace(node);
+    var children = node.children.map((child)=>NonTemplateNode.fromNode(child, namespace));
+    node = removeTags(node, 'template');
 
-  function resolveTemplate(template, templateQualifierName) {
-    var children = template.children
-      .map((child)=>resolveFullQualifierName(templateQualifierName, child));
+    return new TemplateNode({qualifierName, node, children, isNamespace, alias});
 
-    return {
-      qualifierName: templateQualifierName,
-      node: template, children
-    };
-  }
+    function parseQualifierName(namespace){
+      return namespace.join('.').toLowerCase();
+    }
 
-  function traverseTemplate(node, parentNamespace) {
-    var name = node.id.split('.');
-    var childTemplates = findTagsInTemplate(node);
-    var namespace = parentNamespace.concat(name);
-    var qualifierName = namespace.join('.').toLowerCase();
+    function getIsNamespace(){
+      return node.innerHTML.trim().length === 0;
+    }
 
-    var expandedTemplate = removeTemplateTags(expandTemplate(node));
-
-    var template = {
-      key: qualifierName,
-      value: expandedTemplate
-    };
-
-    return []
-      .concat.apply([], childTemplates
-        .map((itTemplate)=>
-          traverseTemplate(itTemplate, namespace)))
-      .concat(template);
-  }
+    function removeTags(node, nodeName) {
+      node = node.cloneNode(true)
+      nodeName = nodeName.toUpperCase();
+      node.children
+        .filter(
+          (child)=>child.nodeName === nodeName)
+        .forEach((child)=>node
+          .removeChild(child));
+      return node;
+    }
+  };
 
   class TemplateRegistry {
 
@@ -105,28 +165,40 @@
     }
 
     register(id, namespace = []) {
-      var nodes = document
-        .querySelectorAll(`#${id}`);
+      var nodes = document.querySelectorAll(`#${id}`);
+      flatten(nodes
+        .map((node)=>new TemplateParser(node, namespace))
+        .map((parser)=>parser.getTemplateNodes()))
+        .forEach((template)=>this.registerParsedTemplate(template));
 
-      nodes.forEach((node)=> {
-        var templates =
-          traverseTemplate(node, namespace);
+      function flatten(array) {
+        return [].concat.apply([], array);
+      }
+    }
 
-        var resolvedTemplates = templates
-          .map((template)=>resolveTemplate(
-            template.value,
-            template.key));
+    registerParsedTemplate(template) {
+      var qualifierName = template.qualifierName;
+      var previousTemplate = this.registry[qualifierName];
 
-        resolvedTemplates
-          .reduce((obj, template)=> {
-              var templateContent = template.node.innerHTML.trim();
-              if (templateContent) {
-                if (obj[template['qualifierName']]) {
-                  var suggestedNamespace = template['qualifierName'].split('.');
-                  suggestedNamespace.shift();
-                  suggestedNamespace.unshift('namespace2');
-                  suggestedNamespace = suggestedNamespace.join('.');
-                  console.error(`Duplicate template declarations:
+      if (template.isNamespace && previousTemplate) {
+        DuplicateTemplateDeclarationError(this.registry, template);
+      } else {
+        this.registry[qualifierName] = template;
+      }
+    }
+
+    find(qualifierName) {
+      return this.registry[qualifierName.toLowerCase()];
+    }
+  }
+
+  function DuplicateTemplateDeclarationError(obj, template) {
+    var suggestedNamespace = template['qualifierName'].split('.');
+    suggestedNamespace.shift();
+    suggestedNamespace.unshift('namespace2');
+    suggestedNamespace = suggestedNamespace.join('.');
+
+    console.error(`Duplicate template declarations:
 
 The qualifier name which is duplicated is:
   ${template['qualifierName']}
@@ -144,19 +216,6 @@ Suggested solution which might solve the problem:
   change the namespace of the a close button:
     <template id="${suggestedNamespace}"></template>
 `);
-                  return obj;
-                }
-              }
-              obj[template['qualifierName']] = template;
-              return obj;
-            },
-            into(this.registry));
-      });
-    }
-
-    find(qualifierName) {
-      return this.registry[qualifierName];
-    }
   }
 
   exports.TemplateRegistry = new TemplateRegistry;

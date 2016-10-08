@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Modulin - Task Manager</title>
+</head>
+<body>
+
+<div data-module=Todo></div>
+
+<script src="../../src/scripts/polyfills.js"></script>
+<script src="../../src/scripts/Module.js"></script>
+<script src="../../src/scripts/ModuleRegistry.js"></script>
+<script src="../../src/scripts/TemplateRegistry.js"></script>
+<script src="../../src/scripts/ModuleRenderer.js"></script>
+<script src="../../src/scripts/ViewModel.js"></script>
+<script src="../../src/scripts/Modulin.js"></script>
+
+
+<template id=Modulin>
+  <template id=Todo>
+
+    <Todo.Header></Todo.Header>
+    <Todo.AddField></Todo.AddField>
+    <Todo.ClearCompleted></Todo.ClearCompleted>
+    <Todo.List></Todo.List>
+
+    <template id=AddField>
+      <input type="text">
+    </template>
+
+    <template id=Header>
+      <div class="title">Placeholder title</div>
+    </template>
+
+    <template id=Button>
+      <div class="content">A button</div>
+    </template>
+
+    <template id=Filter>
+      <div content></div>
+
+      <template id=Button>
+        <div class="content">A button</div>
+      </template>
+    </template>
+
+    <template id=ClearCompleted alias=Modulin.Todo.Button></template>
+
+    <template id=List>
+
+      <template id=Item>
+        <input type="checkbox">
+        <span>A todo item</span>
+      </template>
+
+    </template>
+  </template>
+</template>
+
+<script src="Modules.js"></script>

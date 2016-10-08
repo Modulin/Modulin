@@ -1,19 +1,7 @@
-/**
- * Created by legge on 2016-10-02.
- */
 (function (exports) {
 
-  function copyTemplate(template) {
-    return {
-      qualifierName: template.qualifierName,
-      attributes: template.attributes,
-      node: template.node.cloneNode(true),
-      children: template.children
-    };
-  }
-
-  function findContentNodeIn(root) {
-    return root.children
+  function findContentNodeInTemplate(template) {
+    return template.children
       .filter((it)=>it.node
         .getAttribute('content') !== null)[0];
   }
@@ -25,44 +13,29 @@
       return child;
     }
 
-    template = copyTemplate(template);
+    var alias = template.alias;
+    if (alias) {
+      var aliasedTemplate = templateRegistry.find(alias);
+      aliasedTemplate = aliasedTemplate.copy();
+      aliasedTemplate.qualifierName = template.qualifierName;
+      template = aliasedTemplate;
+    } else {
+      template = template.copy();
+    }
+
     template.attributes = child.attributes;
 
     if (child.children.length === 0) {
       return template;
     }
 
-    var contentAttachment = findContentNodeIn(template);
+    var contentAttachment = findContentNodeInTemplate(template);
     if (!contentAttachment) {
-      console.log(parentDebugContext);
-      var children = child.children.map((child)=>child.node.outerHTML);
-      console.error(`Missing element content mount point in template when attempting to attach inline children
-
-The parent which is being constructed has the qualifier name:
-  ${parentDebugContext.qualifierName}
-
-The module which is used improperly has qualifier name:
-  ${template.qualifierName}
-    
-The affected children are:
-    ${child.node.innerHTML.trim()}
-        
-In the template when used in the following way:
-    ${child.node.outerHTML.trim()}
-    
-The following action will be applied to resolve the issue: 
-  Inline children will be removed 
-
-Suggested solution which might solve the problem:
-  Add a DIV element with a content attribute:
-    ${template.node.innerHTML.trim()}
-[   <div content></div>                                  ]
-`);
+      MissingElementContentMountPoint(template, child, parentDebugContext);
       return template;
     }
 
     contentAttachment.children = contentAttachment.children.concat(child.children);
-
     return template;
   }
 
@@ -72,39 +45,25 @@ Suggested solution which might solve the problem:
 
     if (registryTemplate) {
       root = document.createElement('div');
-      root.classList =
-        generateClassListFrom(
-          template.qualifierName, options);
+      root.classList = generateClassListFromTemplate(template, options);
 
-      if(template.attributes.instance) {
+      if (template.attributes.instance) {
         root.setAttribute('data-instance', template.attributes.instance);
       }
     }
 
-    if (template.node.nodeName.indexOf('.') !== -1
-      && !registryTemplate) {
-      console.error(`No template found
-
-The module which is used improperly has qualifier name:
-  ${template.qualifierName}
-
-The following action will be applied to resolve the issue: 
-  Template will not be rendered (Javascript modules will still be created)
-
-Suggested solution which might solve the problem:
-  Add the template:
-[   <template id=${template.qualifierName}></template>   ]
-`);
+    if (template.node.nodeName.indexOf('.') !== -1 && !registryTemplate) {
+      NoTemplateFound(template);
       root = null;
     }
 
     return root;
   }
 
-  function generateClassListFrom(qualifierName, options) {
-    var expandedQualfierName = qualifierName.split('.');
+  function generateClassListFromTemplate(template, options) {
+    var expandedQualfierName = template.qualifierName.split('.');
 
-    if(options.excludeNamespace){
+    if (options.excludeNamespace) {
       expandedQualfierName.shift();
     }
 
@@ -155,8 +114,8 @@ Suggested solution which might solve the problem:
   function createChildModules(module, children, parentDebugContext, options) {
 
     return children
-      .map((it)=>copyTemplate(it))
-      .map((it)=>useNodeTemplateIfExists(it, parentDebugContext))
+      .map((child)=>child.copy())
+      .map((child)=>useNodeTemplateIfExists(child, parentDebugContext))
       .map((child)=>constructModuleFromTemplate(child, module, options));
   }
 
@@ -170,7 +129,7 @@ Suggested solution which might solve the problem:
 
   class ModuleRenderer {
 
-    constructor(){
+    constructor() {
       this.options = {
         excludeNamespace: true,
         moduleClassSeparator: '__'
@@ -184,6 +143,46 @@ Suggested solution which might solve the problem:
   }
 
   exports.ModuleRenderer = ModuleRenderer;
-  exports.ModuleRenderer.copyTemplate = copyTemplate;
   exports.moduleRenderer = new ModuleRenderer();
+
+  function NoTemplateFound(template){
+    console.error(`No template found
+
+The module which is used improperly has qualifier name:
+  ${template.qualifierName}
+
+The following action will be applied to resolve the issue: 
+  Template will not be rendered (Javascript modules will still be created)
+
+Suggested solution which might solve the problem:
+  Add the template:
+[   <template id=${template.qualifierName}></template>   ]
+`);
+  }
+
+  function MissingElementContentMountPoint(template, child, parentDebugContext) {
+    console.error(`Missing element content mount point in template when attempting to attach inline children
+
+The parent which is being constructed has the qualifier name:
+  ${parentDebugContext.qualifierName}
+
+The module which is used improperly has qualifier name:
+  ${template.qualifierName}
+    
+The affected children are:
+    ${child.node.innerHTML.trim()}
+        
+In the template when used in the following way:
+    ${child.node.outerHTML.trim()}
+    
+The following action will be applied to resolve the issue: 
+  Inline children will be removed 
+
+Suggested solution which might solve the problem:
+  Add a DIV element with a content attribute:
+    ${template.node.innerHTML.trim()}
+[   <div content></div>                                  ]
+`);
+  }
+
 })(window);

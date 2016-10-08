@@ -11,15 +11,13 @@ class ModuleRegistry {
 
     if (module) {
       parent = parentOrModule;
-    }
-    else {
+    } else {
       module = parentOrModule;
     }
 
     if (parent) {
       namespace = parent.__namespace.concat(parent.name);
-    }
-    else {
+    } else {
       namespace = this.defaultNamespace;
     }
 
@@ -37,7 +35,7 @@ class ModuleRegistry {
   }
 
   find(qualifierName) {
-    return this.registry[qualifierName];
+    return this.registry[qualifierName.toLowerCase()];
   }
 }
 

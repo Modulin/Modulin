@@ -39,10 +39,12 @@ Module.prototype.attachListOf = function (moduleClass, mountPoint, listenable) {
   var cache = [];
   listenable((propertyList)=> {
     if (cache.length < propertyList.length) {
-      var viewModel = new ViewModel({});
-      var context = {viewModel: viewModel};
-      var module = Modulin.createModule(mountPoint, moduleClass, context);
-      cache.push(module);
+      while(cache.length < propertyList.length) {
+        var index = cache.length;
+        var viewModel = propertyList[index];
+        var module = Modulin.createModule(mountPoint, moduleClass, {viewModel});
+        cache.push(module);
+      }
     }
 
     else if (cache.length > propertyList.length) {
@@ -51,11 +53,16 @@ Module.prototype.attachListOf = function (moduleClass, mountPoint, listenable) {
     }
 
     cache.forEach((module, index)=> {
-      var values = propertyList[index];
+      var viewModel = propertyList[index];
+      var values = viewModel.__properties;
+
+      module.context.viewModel = viewModel;
 
       for (var key in values) {
         if (values.hasOwnProperty(key)) {
-          module.context.viewModel.set(key, values[key]);
+          var diff = {};
+          diff[key] = values[key];
+          module.update(diff);
         }
       }
     })
