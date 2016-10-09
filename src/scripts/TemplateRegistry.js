@@ -4,7 +4,7 @@
     constructor(templateElement, parentNamespace) {
       this.templateElement = templateElement;
       this.namespace = parentNamespace.concat(this.getId());
-      this.node = this.getExpandedTemplate(['id', 'alias']);
+      this.node = this.getExpandedTemplate({excludedAttributes: ['id', 'alias']});
       this.childNodes = this.getChildTemplateParsers();
       this.templateNode = TemplateNode.fromNode(this.node, this.namespace, this.templateElement.getAttribute('alias'));
     }
@@ -21,14 +21,15 @@
       return [].concat.apply(this.templateNode, this.childNodes.map((node)=>node.getTemplateNodes()));
     }
 
-    getExpandedTemplate(excludedAttributes) {
+    getExpandedTemplate(parameters) {
+      var excludedAttributes = parameters.excludedAttributes;
+
       var expandedTemplate = document.createElement('div');
       expandedTemplate.innerHTML = this.templateElement.innerHTML;
 
       this.templateElement.attributes
         .filter((attr)=>excludedAttributes.indexOf(attr.name) === -1)
-        .forEach((attr)=>
-          expandedTemplate.setAttribute(attr.name, attr.value));
+        .forEach((attr)=>expandedTemplate.setAttribute(attr.name, attr.value));
 
       return expandedTemplate;
     }
@@ -39,6 +40,7 @@
       this.qualifierName = parameters.qualifierName;
       this.node = parameters.node;
       this.children = parameters.children;
+      this.isTemplate = false;
 
       this.attributes = parameters.attributes;
     }
@@ -52,6 +54,7 @@
         qualifierName: this.qualifierName,
         node: this.node.cloneNode(true),
         children: this.children,
+        isTemplate: this.isTemplate,
 
         attributes: this.attributes
       });
@@ -117,6 +120,7 @@
       this.qualifierName = parameters.qualifierName;
       this.node = parameters.node;
       this.children = parameters.children;
+      this.isTemplate = true;
 
       this.isNamespace = parameters.isNamespace;
       this.alias = parameters.alias;
@@ -131,6 +135,7 @@
         qualifierName: this.qualifierName,
         node: this.node.cloneNode(true),
         children: this.children,
+        isTemplate: this.isTemplate,
 
         isNamespace: this.isNamespace,
         alias: this.alias,
@@ -155,7 +160,7 @@
     }
 
     function removeTags(node, nodeName) {
-      node = node.cloneNode(true)
+      node = node.cloneNode(true);
       nodeName = nodeName.toUpperCase();
       node.children
         .filter(
