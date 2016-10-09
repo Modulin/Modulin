@@ -1,45 +1,56 @@
 (function (exports) {
 
-  const Resolvers = {
-    alias: function aliasResolver(node, template) {
-      var aliasedTemplate = template.getAliasTemplate();
+  function aliasMutator(parameters) {
+    var template = parameters.template;
+    var aliasedTemplate = template.getAliasTemplate();
 
-      if (aliasedTemplate) {
-        aliasedTemplate = aliasedTemplate.copy();
-        aliasedTemplate.qualifierName = template.qualifierName;
-        template = aliasedTemplate;
-      } else {
-        template = template.copy();
-      }
-
-      return template;
-    },
-    attribute: function attributeResolver(node, template) {
-      template.attributes = node.attributes;
-      return template;
-    },
-    contentAttachment: function contentAttachmentResolver(node, template) {
-      if (node.children.length === 0) {
-        return template;
-      }
-
-      var contentAttachment = findContentNodeInTemplate(template);
-      if (!contentAttachment) {
-        MissingElementContentMountPoint(template, node);
-        return template;
-      }
-
-      contentAttachment.children = contentAttachment.children.concat(node.children);
-      return template;
-
-      function findContentNodeInTemplate(template) {
-        return template.children
-          .filter((it)=>it.node
-            .getAttribute('content') !== null)[0];
-      }
+    if (aliasedTemplate) {
+      aliasedTemplate = aliasedTemplate.copy();
+      aliasedTemplate.qualifierName = template.qualifierName;
+      template = aliasedTemplate;
     }
-  };
 
+    return template;
+  }
+
+  function attributeMutator(parameters) {
+    var node = parameters.node;
+    var template = parameters.template;
+
+    template.attributes = node.attributes;
+    return template;
+  }
+
+  function contentAttachmentMutator(parameters) {
+    var node = parameters.node;
+    var template = parameters.template;
+
+    if (node.children.length === 0) {
+      return template;
+    }
+
+    var contentAttachment = findContentNodeInTemplate(template);
+    if (!contentAttachment) {
+      MissingElementContentMountPoint(template, node);
+      return template;
+    }
+
+    contentAttachment.children = contentAttachment.children.concat(node.children);
+    return template;
+
+    function findContentNodeInTemplate(template) {
+      return template.children
+        .filter((it)=>it.node
+          .getAttribute('content') !== null)[0];
+    }
+  }
+
+
+  var templateMutators = [];
+
+  templateMutators.push(aliasMutator);
+  templateMutators.push(attributeMutator);
+  templateMutators.push(contentAttachmentMutator);
 
   class Attribute {
     constructor(key, value) {
@@ -47,13 +58,15 @@
       this.value = value;
     }
 
-    writeTo(node){
-      node.setAttribute(this.key, this.value)
+    writeTo(node) {
+      if (this.value || node.getAttribute(this.key)) {
+        node.setAttribute(this.key, this.value)
+      }
     }
   }
 
   class ClassAttribute {
-    constructor(template, options){
+    constructor(template, options) {
       var separator = options.moduleClassSeparator;
       var expandedQualfierName = template.qualifierName.split('.');
 
@@ -77,26 +90,39 @@
         }, []);
     }
 
-    writeTo(node){
+    writeTo(node) {
       node.classList = this.value.join(' ');
     }
   }
 
-
   class ModuleConstructor {
-    constructor(options, template, parentModule) {
+    constructor(options, node, parentModule) {
       this.options = options;
-
-      this.template = template;
       this.parent = parentModule;
+
+      this.template = node.isTemplate ? node : node.getTemplate();
+      this.templateChild = this.template ? null : node.copy();
     }
 
-    mountModule(module, node, children){
-      var properties = this.template.attributes;
+    getQualifierName() {
+      return this.getTemplateLike().qualifierName;
+    }
+
+    getTemplateLike() {
+      return (this.template || this.templateChild);
+    }
+
+
+    attachChildModulesToDomNode(childModules, domNode) {
+      childModules.filter((module)=>!!module.element).forEach((module)=>domNode.appendChild(module.element));
+    }
+
+    mountModule(module, node, childModules) {
+      var properties = this.getTemplateLike().attributes;
       var parent = this.parent;
 
       if (node) {
-        children.filter((module)=>!!module.element).forEach((module)=>node.appendChild(module.element));
+        this.attachChildModulesToDomNode(childModules, node);
       }
 
       if (module) {
@@ -107,13 +133,11 @@
       return module || {element: node};
     }
 
-    constructChildren(node, module) {
+    constructChild(node, module) {
       var template = node.getTemplate();
 
       if (template) {
-        template = Resolvers.alias(node, template);
-        template = Resolvers.attribute(node, template);
-        template = Resolvers.contentAttachment(node, template);
+        template = templateMutators.reduce((template, resolver)=>resolver({node, template}), template.copy());
       } else {
         template = node.copy();
       }
@@ -121,43 +145,42 @@
       return new ModuleConstructor(this.options, template, module).constructAndMount();
     }
 
-    constructRootNode() {
-      var node = this.template.node;
-      var registryTemplate = templateRegistry.find(this.template.qualifierName);
-
-      if (registryTemplate) {
-
-        var attributeList = [];
-        attributeList.push(new ClassAttribute(this.template, this.options));
-        if (this.template.attributes.instance) {
-          attributeList.push(new Attribute('instance', this.template.attributes.instance));
-        }
-
-        node = document.createElement('div');
-        attributeList.forEach((attr) =>attr.writeTo(node));
-      }
-
-      if (this.template.node.nodeName.indexOf('.') !== -1 && !registryTemplate) {
-        NoTemplateFound(this.template);
-      }
-
-      return node;
+    constructChildModules(module) {
+      return this.getTemplateLike().children.map((child)=>this.constructChild(child, module));
     }
 
-    constructoModule() {
-      var qualifierName = this.template.qualifierName;
-      var Module = moduleRegistry.find(qualifierName);
-      if (Module) {
-        return new Module();
+    constructDomNode() {
+      if (this.template) {
+        var domNode = document.createElement('div');
+
+        [new ClassAttribute(this.template, this.options),
+         new Attribute('instance', this.template.attributes.instance)
+        ].forEach((attr)=>attr.writeTo(domNode));
+
+        return domNode;
+      } else {
+
+        if (this.templateChild.node.nodeName.indexOf('.') !== -1) {
+          NoTemplateFound(this.templateChild);
+        }
+
+        return this.templateChild.node;
       }
+    }
+
+    constructModule() {
+      var qualifierName = this.getQualifierName();
+      var Module = moduleRegistry.find(qualifierName);
+
+      return Module ? new Module() : null;
     }
 
     constructAndMount() {
-      var module = this.constructoModule();
-      var node = this.constructRootNode();
-      var childModules = this.template.children.map((child)=>this.constructChildren(child, module));
+      var module = this.constructModule();
+      var domNode = this.constructDomNode();
+      var childModules = this.constructChildModules(module);
 
-      return this.mountModule(module, node, childModules);
+      return this.mountModule(module, domNode, childModules);
     }
   }
 
@@ -171,7 +194,8 @@
     }
 
     constructFromTemplate(template, parent) {
-      return new ModuleConstructor(this.options, template, parent).constructAndMount();
+      var constructor = new ModuleConstructor(this.options, template, parent);
+      return constructor.constructAndMount();
     }
   }
 
@@ -193,11 +217,8 @@ Suggested solution which might solve the problem:
 `);
   }
 
-  function MissingElementContentMountPoint(template, child, parentDebugContext) {
+  function MissingElementContentMountPoint(template, child) {
     console.error(`Missing element content mount point in template when attempting to attach inline children
-
-The parent which is being constructed has the qualifier name:
-  ${parentDebugContext.qualifierName}
 
 The module which is used improperly has qualifier name:
   ${template.qualifierName}
